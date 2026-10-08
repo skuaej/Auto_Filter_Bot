@@ -33,6 +33,7 @@ TIMEZONE = "Asia/Kolkata"
 BATCH_FILES = {}
 REQUEST_INVITE_LINK_CACHE: dict[int, str] = {}
 @Client.on_message(filters.command("start") & filters.incoming)
+@Client.on_message(filters.command("start") & filters.incoming)
 async def start(client, message):
     try:
         if EMOJI_MODE:
@@ -266,7 +267,7 @@ async def start(client, message):
                 btn = []
                 chat = grp_id
                 settings = await get_settings(chat)
-                fsub_channels = list(dict.fromkeys((settings.get('fsub', []) if settings else [])+ AUTH_CHANNELS)) 
+                fsub_channels = list(dict.fromkeys((settings.get('fsub', []) if settings else []) + AUTH_CHANNELS)) 
 
                 if fsub_channels:
                     btn += await is_subscribed(client, message.from_user.id, fsub_channels)
@@ -355,15 +356,17 @@ async def start(client, message):
                     DREAMX_CAPTION = settings.get('caption', CUSTOM_FILE_CAPTION)
                     if DREAMX_CAPTION:
                         try:
-                            f_caption=DREAMX_CAPTION.format(file_name= '' if title is None else title, file_size='' if size is None else size, file_caption='' if f_caption is None else f_caption)
+                            f_caption = DREAMX_CAPTION.format(
+                                file_name='' if title is None else title,
+                                file_size='' if size is None else size,
+                                file_caption='' if f_caption is None else f_caption
+                            )
                         except Exception as e:
                             logger.exception(e)
-                            f_caption = f_caption
                     if f_caption is None:
                         f_caption = f"{clean_filename(files1.file_name)}"
                     btn = await stream_buttons(message.from_user.id, file_id)
 
-                    # ✅ Fixed: Always use send_cached_media
                     msg = await client.send_cached_media(
                         chat_id=message.from_user.id,
                         file_id=file_id,
@@ -392,34 +395,33 @@ async def start(client, message):
             try:
                 details = await get_file_details(file_id)
                 cover = None
-                if details:
-                    if COVERX:
-                        cover = details[0].cover if details[0].cover else None
+                if details and COVERX:
+                    cover = details[0].cover if details[0].cover else None
                 btn = await stream_buttons(message.from_user.id, file_id)
 
-                # ✅ Fixed: Always use send_cached_media
                 msg = await client.send_cached_media(
                     chat_id=message.from_user.id,
                     file_id=file_id,
                     protect_content=settings.get('file_secure', PROTECT_CONTENT),
                     reply_markup=InlineKeyboardMarkup(btn)
                 )
-
-                filetype = msg.media
+filetype = msg.media
                 file = getattr(msg, filetype.value)
                 title = clean_filename(file.file_name)
-                size=get_size(file.file_size)
+                size = get_size(file.file_size)
                 f_caption = f"<code>{title}</code>"
                 settings = await get_settings(int(grp_id))
                 DREAMX_CAPTION = settings.get('caption', CUSTOM_FILE_CAPTION)
                 if DREAMX_CAPTION:
                     try:
                         f_caption = DREAMX_CAPTION.format(
-    file_name='' if title is None else title,
-    file_size='' if size is None else size,
-    file_caption='' if f_caption is None else f_caption
+                            file_name='' if title is None else title,
+                            file_size='' if size is None else size,
+                            file_caption=''
                         )
-
+                    except Exception:
+                        return
+                
 async def stream_buttons(user_id: int, file_id: str):
     if STREAM_MODE and not PREMIUM_STREAM_MODE:
         return [
