@@ -25,15 +25,27 @@ async def render_page(id, secure_hash, src=None):
         f"{id}/{urllib.parse.quote_plus(file_data.file_name)}?hash={secure_hash}",
     )
 
-    tag = file_data.mime_type.split("/")[0].strip()
+    file_name = file_data.file_name or ""
+    tag = file_data.mime_type.split("/")[0].strip() if file_data.mime_type else ""
+    mime = (file_data.mime_type or "").lower()
+    is_video_or_audio = (
+        tag in ["video", "audio"]
+        or "matroska" in mime
+        or "video" in mime
+        or file_name.lower().endswith(('.mkv', '.mp4', '.avi', '.mov', '.webm', '.flv', '.m4v', '.mp3', '.m4a', '.aac'))
+    )
     file_size = humanbytes(file_data.file_size)
-    if tag in ["video", "audio"]:
+    if is_video_or_audio:
         template_file = "dreamxbotz/template/req.html"
     else:
         template_file = "dreamxbotz/template/dl.html"
-        async with aiohttp.ClientSession() as s:
-            async with s.get(src) as u:
-                file_size = humanbytes(int(u.headers.get("Content-Length")))
+        try:
+            async with aiohttp.ClientSession() as s:
+                async with s.get(src) as u:
+                    if u.headers.get("Content-Length"):
+                        file_size = humanbytes(int(u.headers.get("Content-Length")))
+        except Exception:
+            pass
 
     with open(template_file) as f:
         template = jinja2.Template(f.read())

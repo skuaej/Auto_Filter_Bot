@@ -1113,39 +1113,59 @@ async def cb_handler(client: Client, query: CallbackQuery):
             await query.answer("Yᴏᴜ ᴅᴏɴ'ᴛ ʜᴀᴠᴇ ᴘᴇʀᴍɪssɪᴏɴ ᴛᴏ sᴇᴇ ᴛʜɪꜱ ❌", show_alert=True)
 
     elif DreamxData.startswith("generate_stream_link"):
-        _, file_id = DreamxData.split(":")
+        _, file_id = DreamxData.split(":", 1)
+        if not BIN_CHANNEL or BIN_CHANNEL == -100:
+            await query.answer("⚠️ Stream Error: BIN_CHANNEL is not set! Please add BIN_CHANNEL to your environment variables and make the bot admin.", show_alert=True)
+            return
         try:
             user_id = query.from_user.id
             username = query.from_user.mention
-            log_msg = await client.send_cached_media(chat_id=BIN_CHANNEL, file_id=file_id,)
+            log_msg = await client.send_cached_media(chat_id=BIN_CHANNEL, file_id=file_id)
             fileName = quote_plus(get_name(log_msg))
             dreamx_stream = f"{URL}watch/{str(log_msg.id)}/{quote_plus(get_name(log_msg))}?hash={get_hash(log_msg)}"
             dreamx_download = f"{URL}{str(log_msg.id)}/{quote_plus(get_name(log_msg))}?hash={get_hash(log_msg)}"
             await query.answer(MSG_ALRT)
-            await asyncio.sleep(1)
-            await log_msg.reply_text(
-                text=f"•• ʟɪɴᴋ ɢᴇɴᴇʀᴀᴛᴇᴅ ꜰᴏʀ ɪᴅ #{user_id} \n•• ᴜꜱᴇʀɴᴀᴍᴇ : {username} \n\n•• ᖴᎥᒪᗴ Nᗩᗰᗴ : {fileName}",
-                link_preview_options=LinkPreviewOptions(is_disabled=True),
-                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🚀 ꜰᴀꜱᴛ ᴅᴏᴡɴʟᴏᴀᴅ 🚀", url=dreamx_download),  # we download Link
-                                                    InlineKeyboardButton('🖥️ ᴡᴀᴛᴄʜ ᴏɴʟɪɴᴇ 🖥️', url=dreamx_stream)]])  # web stream Link
-            )
-            dreamcinezone = await query.edit_message_reply_markup(
-                reply_markup=InlineKeyboardMarkup([
-                    [
-                        InlineKeyboardButton("🚀 ꜰᴀꜱᴛ ᴅᴏᴡɴʟᴏᴀᴅ 🚀", url=dreamx_download),
-                        InlineKeyboardButton('🖥️ ᴡᴀᴛᴄʜ ᴏɴʟɪɴᴇ 🖥️', url=dreamx_stream)
-                    ],
-                    [
-                        InlineKeyboardButton('📌 ᴊᴏɪɴ ᴜᴘᴅᴀᴛᴇꜱ ᴄʜᴀɴɴᴇʟ 📌', url=UPDATE_CHNL_LNK)
-                    ]
-                ])
-            )
-            await asyncio.sleep(DELETE_TIME)
-            await dreamcinezone.delete()
+            try:
+                await log_msg.reply_text(
+                    text=f"•• ʟɪɴᴋ ɢᴇɴᴇʀᴀᴛᴇᴅ ꜰᴏʀ ɪᴅ #{user_id} \n•• ᴜꜱᴇʀɴᴀᴍᴇ : {username} \n\n•• ᖴᎥᒪᗴ Nᗩᗰᗴ : {fileName}",
+                    link_preview_options=LinkPreviewOptions(is_disabled=True),
+                    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🚀 ꜰᴀꜱᴛ ᴅᴏᴡɴʟᴏᴀᴅ 🚀", url=dreamx_download),
+                                                        InlineKeyboardButton('🖥️ ᴡᴀᴛᴄʜ ᴏɴʟɪɴᴇ 🖥️', url=dreamx_stream)]])
+                )
+            except Exception:
+                pass
+            try:
+                await client.send_message(
+                    chat_id=user_id,
+                    text=f"<b>🎬 Here are your links:</b>\n\n🍿 <b>Watch Online:</b> {dreamx_stream}\n⚡ <b>Fast Download:</b> {dreamx_download}",
+                    reply_markup=InlineKeyboardMarkup([
+                        [
+                            InlineKeyboardButton("🚀 ꜰᴀꜱᴛ ᴅᴏᴡɴʟᴏᴀᴅ 🚀", url=dreamx_download),
+                            InlineKeyboardButton('🖥️ ᴡᴀᴛᴄʜ ᴏɴʟɪɴᴇ 🖥️', url=dreamx_stream)
+                        ]
+                    ]),
+                    link_preview_options=LinkPreviewOptions(is_disabled=True)
+                )
+            except Exception:
+                pass
+            try:
+                await query.edit_message_reply_markup(
+                    reply_markup=InlineKeyboardMarkup([
+                        [
+                            InlineKeyboardButton("🚀 ꜰᴀꜱᴛ ᴅᴏᴡɴʟᴏᴀᴅ 🚀", url=dreamx_download),
+                            InlineKeyboardButton('🖥️ ᴡᴀᴛᴄʜ ᴏɴʟɪɴᴇ 🖥️', url=dreamx_stream)
+                        ],
+                        [
+                            InlineKeyboardButton('📌 ᴊᴏɪɴ ᴜᴘᴅᴀᴛᴇꜱ ᴄʜᴀɴɴᴇʟ 📌', url=UPDATE_CHNL_LNK)
+                        ]
+                    ])
+                )
+            except Exception:
+                pass
             return
         except Exception as e:
             logger.error("Callback error: %s", e)
-            await query.answer(f"⚠️ SOMETHING WENT WRONG STREAM LINK  \n\n{e}", show_alert=True)
+            await query.answer(f"⚠️ SOMETHING WENT WRONG STREAM LINK\n\n{e}", show_alert=True)
             return
 
 
