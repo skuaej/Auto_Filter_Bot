@@ -32,8 +32,6 @@ logger = logging.getLogger(__name__)
 TIMEZONE = "Asia/Kolkata"
 BATCH_FILES = {}
 REQUEST_INVITE_LINK_CACHE: dict[int, str] = {}
-
-
 @Client.on_message(filters.command("start") & filters.incoming)
 async def start(client, message):
     try:
@@ -205,8 +203,8 @@ async def start(client, message):
                 seconds = 2592000
                 if seconds > 0:
                     expiry_time = datetime.now() + timedelta(seconds=seconds)
-                    user_data = {"id": user_id, "expiry_time": expiry_time}  # Using "id" instead of "user_id"  
-                    await db.update_user(user_data)  # Use the update_user method to update or insert user data		    
+                    user_data = {"id": user_id, "expiry_time": expiry_time}
+                    await db.update_user(user_data)
                     await client.send_message(
                         chat_id=user_id,
                         text=f"<b>Hᴇʏ {uss.mention}\n\nYᴏᴜ ɢᴏᴛ 1 ᴍᴏɴᴛʜ ᴘʀᴇᴍɪᴜᴍ sᴜʙsᴄʀɪᴘᴛɪᴏɴ ʙʏ ɪɴᴠɪᴛɪɴɢ 10 ᴜsᴇʀs ❗</b>",
@@ -267,7 +265,7 @@ async def start(client, message):
             try:
                 btn = []
                 chat = grp_id
-                settings      = await get_settings(chat)
+                settings = await get_settings(chat)
                 fsub_channels = list(dict.fromkeys((settings.get('fsub', []) if settings else [])+ AUTH_CHANNELS)) 
 
                 if fsub_channels:
@@ -346,13 +344,11 @@ async def start(client, message):
                 if not files:
                     return await message.reply('<b><i>ɴᴏ ꜱᴜᴄʜ ꜰɪʟᴇ ᴇxɪꜱᴛꜱ !</b></i>')
                 send_allfiles = []
-                cover = None
                 for file in files:
                     file_id = file.file_id
                     files_ = await get_file_details(file_id)
                     files1 = files_[0]
                     title = clean_filename(files1.file_name)
-                    cover = files1.cover
                     size = get_size(files1.file_size)
                     f_caption = files1.caption
                     settings = await get_settings(int(grp_id))
@@ -366,23 +362,15 @@ async def start(client, message):
                     if f_caption is None:
                         f_caption = f"{clean_filename(files1.file_name)}"
                     btn = await stream_buttons(message.from_user.id, file_id)
-                    if files1.file_type == 'video':
-                        msg = await client.send_video(
-                            chat_id=message.from_user.id,
-                            video=file_id,
-                            caption=f_caption,
-                            video_cover=cover,
-                            protect_content=settings.get('file_secure', PROTECT_CONTENT),
-                            reply_markup=InlineKeyboardMarkup(btn)
-                        )
-                    else:
-                        msg = await client.send_cached_media(
-                            chat_id=message.from_user.id,
-                            file_id=file_id,
-                            caption=f_caption,
-                            protect_content=settings.get('file_secure', PROTECT_CONTENT),
-                            reply_markup=InlineKeyboardMarkup(btn)
-                        )
+
+                    # ✅ Fixed: Always use send_cached_media
+                    msg = await client.send_cached_media(
+                        chat_id=message.from_user.id,
+                        file_id=file_id,
+                        caption=f_caption,
+                        protect_content=settings.get('file_secure', PROTECT_CONTENT),
+                        reply_markup=InlineKeyboardMarkup(btn)
+                    )
                     send_allfiles.append(msg)
                 k = await client.send_message(chat_id=message.from_user.id, text=script.DEL_MSG.format(get_time(DELETE_TIME)), parse_mode=enums.ParseMode.HTML)
 
@@ -404,27 +392,18 @@ async def start(client, message):
             try:
                 details = await get_file_details(file_id)
                 cover = None
-                is_video = False
                 if details:
                     if COVERX:
                         cover = details[0].cover if details[0].cover else None
-                    is_video = details[0].file_type == 'video'
                 btn = await stream_buttons(message.from_user.id, file_id)
-                if is_video:
-                    msg = await client.send_video(
-                        chat_id=message.from_user.id,
-                        video=file_id,
-                        video_cover=cover,
-                        protect_content=settings.get('file_secure', PROTECT_CONTENT),
-                        reply_markup=InlineKeyboardMarkup(btn)
-                    )
-                else:
-                    msg = await client.send_cached_media(
-                        chat_id=message.from_user.id,
-                        file_id=file_id,
-                        protect_content=settings.get('file_secure', PROTECT_CONTENT),
-                        reply_markup=InlineKeyboardMarkup(btn)
-                    )
+
+                # ✅ Fixed: Always use send_cached_media
+                msg = await client.send_cached_media(
+                    chat_id=message.from_user.id,
+                    file_id=file_id,
+                    protect_content=settings.get('file_secure', PROTECT_CONTENT),
+                    reply_markup=InlineKeyboardMarkup(btn)
+                )
 
                 filetype = msg.media
                 file = getattr(msg, filetype.value)
@@ -435,68 +414,7 @@ async def start(client, message):
                 DREAMX_CAPTION = settings.get('caption', CUSTOM_FILE_CAPTION)
                 if DREAMX_CAPTION:
                     try:
-                        f_caption=DREAMX_CAPTION.format(file_name= '' if title is None else title, file_size='' if size is None else size, file_caption='')
-                    except Exception:
-                        return
-                await msg.edit_caption(f_caption, reply_markup=InlineKeyboardMarkup(btn))
-                k = await msg.reply(script.DEL_MSG.format(get_time(DELETE_TIME)), parse_mode=enums.ParseMode.HTML)
-                await asyncio.sleep(DELETE_TIME)
-                await msg.delete()
-                await k.edit_text("<b>ʏᴏᴜʀ ᴠɪᴅᴇᴏ / ꜰɪʟᴇ ɪꜱ ꜱᴜᴄᴄᴇꜱꜱꜰᴜʟʟʏ ᴅᴇʟᴇᴛᴇᴅ !!</b>")
-                return
-            except MediaEmpty:
-                return await message.reply('<b>⚠️ ꜰɪʟᴇ ɪꜱ ᴄᴜʀʀᴇɴᴛʟʏ ᴜɴᴀᴠᴀɪʟᴀʙʟᴇ. ᴘʟᴇᴀꜱᴇ ᴛʀʏ ᴀɢᴀɪɴ ʟᴀᴛᴇʀ!</b>')
-            except Exception as e:
-                logger.exception(e)
-                pass
-            return await message.reply('<b>❌ ɴᴏ ꜱᴜᴄʜ ꜰɪʟᴇ ᴇxɪꜱᴛꜱ !</b>')
-
-        files = files_[0]
-        title = clean_filename(files.file_name)
-        size = get_size(files.file_size)
-        cover = files.cover if files.cover else None
-        f_caption = files.caption
-        settings = await get_settings(int(grp_id))            
-        DREAMX_CAPTION = settings.get('caption', CUSTOM_FILE_CAPTION)
-        if DREAMX_CAPTION:
-            try:
-                f_caption=DREAMX_CAPTION.format(file_name= '' if title is None else title, file_size='' if size is None else size, file_caption='' if f_caption is None else f_caption)
-            except Exception as e:
-                logger.exception(e)
-                pass
-        if f_caption is None:
-            f_caption = clean_filename(files.file_name)
-        btn = await stream_buttons(message.from_user.id, file_id)
-        if files.file_type == 'video':
-            msg = await client.send_cached_media(
-    chat_id=message.chat.id,
-    file_id=file_id,  # change 'video=' to 'file_id='
-    caption=caption,
-    protect_content=PROTECT_CONTENT,
-    reply_markup=reply_markup
-            )
-            
-        else:
-            msg = await client.send_cached_media(
-                chat_id=message.from_user.id,
-                file_id=file_id,
-                caption=f_caption,
-                protect_content=settings.get('file_secure', PROTECT_CONTENT),
-                reply_markup=InlineKeyboardMarkup(btn)
-            )
-        
-        k = await msg.reply(script.DEL_MSG.format(get_time(DELETE_TIME)), parse_mode=enums.ParseMode.HTML)
-        await asyncio.sleep(DELETE_TIME)
-        await msg.delete()
-        await k.edit_text("<b>ʏᴏᴜʀ ᴠɪᴅᴇᴏ / ꜰɪʟᴇ ɪꜱ ꜱᴜᴄᴄᴇꜱꜱꜰᴜʟʟʏ ᴅᴇʟᴇᴛᴇᴅ !!</b>")
-        return
-    except StopPropagation:
-        raise
-    except MediaEmpty:
-        return await message.reply('<b>⚠️ ꜰɪʟᴇ ɪꜱ ᴄᴜʀʀᴇɴᴛʟʏ ᴜɴᴀᴠᴀɪʟᴀʙʟᴇ. ᴘʟᴇᴀꜱᴇ ᴛʀʏ ᴀɢᴀɪɴ ʟᴀᴛᴇʀ!</b>')
-    except Exception as e:
-        logger.exception(f"Error In /start command - {e}")
-        pass
+                        f_caption=DREAMX_CAPTION.format(file_name= '' if title is None else title, file_size
 
 async def stream_buttons(user_id: int, file_id: str):
     if STREAM_MODE and not PREMIUM_STREAM_MODE:
