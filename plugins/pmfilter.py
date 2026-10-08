@@ -4,7 +4,9 @@ from rapidfuzz import process
 from dreamxbotz.util.file_properties import get_name, get_hash
 from urllib.parse import quote_plus
 
-from database.ia_filterdb import Media, Media2, get_search_results, get_bad_files
+from database.ia_filterdb import Media, Media2, get_search_results, get_bad_files, get_file_details
+from pyrogram.file_id import FileId
+import base64
 from database.config_db import mdb
 from pyrogram.errors import MessageIdInvalid, UserIsBlocked, MessageNotModified, PeerIdInvalid, MessageDeleteForbidden
 from pyrogram import Client, filters, enums
@@ -29,6 +31,24 @@ from datetime import datetime, timedelta
 lock = asyncio.Lock()
 
 logger = logging.getLogger(__name__)
+
+def get_full_file_id(file_doc, fallback_file_id=None):
+    if not file_doc:
+        return fallback_file_id
+    f_id = getattr(file_doc, "file_id", None) or fallback_file_id
+    f_ref = getattr(file_doc, "file_ref", None)
+    if not f_id:
+        return fallback_file_id
+    if not f_ref:
+        return f_id
+    try:
+        decoded = FileId.decode(f_id)
+        if not decoded.file_reference:
+            decoded.file_reference = base64.urlsafe_b64decode(f_ref + "=" * (-len(f_ref) % 4))
+            return decoded.encode()
+    except Exception:
+        pass
+    return f_id
 
 
 
@@ -1120,6 +1140,12 @@ async def cb_handler(client: Client, query: CallbackQuery):
         try:
             user_id = query.from_user.id
             username = query.from_user.mention
+            try:
+                details = await get_file_details(file_id)
+                if details:
+                    file_id = get_full_file_id(details[0], file_id)
+            except Exception:
+                pass
             log_msg = await client.send_cached_media(chat_id=BIN_CHANNEL, file_id=file_id)
             fileName = quote_plus(get_name(log_msg))
             dreamx_stream = f"{URL}watch/{str(log_msg.id)}/{quote_plus(get_name(log_msg))}?hash={get_hash(log_msg)}"

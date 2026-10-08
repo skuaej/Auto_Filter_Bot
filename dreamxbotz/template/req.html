@@ -946,10 +946,13 @@
         <section id="video-section" class="fade-in">
             <div class="player-wrapper">
                 <div class="video-container">
-                    <video id="player" class="mkv-player" playsinline controls
+                    <video id="player" class="mkv-player" playsinline controls preload="none"
                         data-poster="https://i.ibb.co/MxYbt8M1/x.jpg">
                         <source src="{{file_url}}" />
                     </video>
+                </div>
+                <div id="mkv-hint" style="margin: 10px 0; padding: 10px 14px; background: rgba(30, 41, 59, 0.9); border-left: 4px solid #f43f5e; border-radius: 8px; font-size: 0.88rem; color: #cbd5e1; display: flex; align-items: center; gap: 8px;">
+                    <span>💡 <b>Tip:</b> If video shows a black screen or buffers slowly in browser, tap <b>VLC Player</b> or <b>MX Player</b> below for smooth hardware playback!</span>
                 </div>
             </div>
 
@@ -1151,6 +1154,13 @@
                 console.error("Video element not found");
                 return;
             }
+            video.addEventListener("error", function() {
+                const hint = document.getElementById("mkv-hint");
+                if (hint) {
+                    hint.style.background = "rgba(185, 28, 28, 0.9)";
+                    hint.innerHTML = '<span>⚠️ <b>Playback Error:</b> Browser cannot decode this MKV/HEVC video track. Please tap <b>VLC Player</b> or <b>MX Player</b> below to play smoothly!</span>';
+                }
+            });
 
             const source = video.querySelector("source");
             const url = source?.src || "";

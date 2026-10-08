@@ -39,6 +39,24 @@ def is_telegram_video(file_id: str) -> bool:
     except Exception:
         return False
 
+def get_full_file_id(file_doc, fallback_file_id=None):
+    if not file_doc:
+        return fallback_file_id
+    f_id = getattr(file_doc, "file_id", None) or fallback_file_id
+    f_ref = getattr(file_doc, "file_ref", None)
+    if not f_id:
+        return fallback_file_id
+    if not f_ref:
+        return f_id
+    try:
+        decoded = FileId.decode(f_id)
+        if not decoded.file_reference:
+            decoded.file_reference = base64.urlsafe_b64decode(f_ref + "=" * (-len(f_ref) % 4))
+            return decoded.encode()
+    except Exception:
+        pass
+    return f_id
+
 
 TIMEZONE = "Asia/Kolkata"
 BATCH_FILES = {}
@@ -376,7 +394,7 @@ async def start(client, message):
                             f_caption = f_caption
                     if f_caption is None:
                         f_caption = f"{clean_filename(files1.file_name)}"
-                    actual_file_id = getattr(files1, "file_id", None) or file_id
+                    actual_file_id = get_full_file_id(files1, getattr(files1, "file_id", None) or file_id)
                     btn = await stream_buttons(client, message.from_user.id, actual_file_id)
                     can_send_video = (files1.file_type == 'video') and is_telegram_video(actual_file_id)
                     if can_send_video:
@@ -500,7 +518,7 @@ async def start(client, message):
                 pass
         if f_caption is None:
             f_caption = clean_filename(files.file_name)
-        actual_file_id = getattr(files, "file_id", None) or decoded_file_id or file_id
+        actual_file_id = get_full_file_id(files, getattr(files, "file_id", None) or decoded_file_id or file_id)
         btn = await stream_buttons(client, message.from_user.id, actual_file_id)
         can_send_video = (files.file_type == 'video') and is_telegram_video(actual_file_id)
         if can_send_video:
@@ -539,7 +557,7 @@ async def start(client, message):
     except StopPropagation:
         raise
     except MediaEmpty:
-        return await message.reply('<b>⚠️ ꜰɪʟᴇ ɪꜱ ᴄᴜʀʀᴇɴᴛʟʏ ᴜɴᴀᴠᴀɪʟᴀʙʟᴇ. ᴘʟᴇᴀꜱᴇ ᴛʀʏ ᴀɢᴀɪɴ ʟᴀᴛᴇʀ!</b>')
+        return await message.reply('<b>⚠️ ꜰɪʟᴇ ɪꜱ ᴄᴜʀʀᴇɴᴛʟʏ ᴜɴᴀᴠᴀɪʟᴀʙʟᴇ (Media reference expired in Telegram). ᴘʟᴇᴀꜱᴇ ᴛʀʏ ᴀɴᴏᴛʜᴇʀ ꜰɪʟᴇ!</b>')
     except Exception as e:
         logger.exception(f"Error In /start command - {e}")
         pass
@@ -581,6 +599,8 @@ async def stream_buttons(client_or_user_id, user_id_or_file_id=None, file_id=Non
                 [InlineKeyboardButton('ℹ️ ᴠɪᴇᴡ ᴀᴜᴅɪᴏ & ꜱᴜʙꜱ ɪɴꜰᴏ ℹ️', callback_data=f'extract_data:{file_id}')],
                 [InlineKeyboardButton('📌 ᴊᴏɪɴ ᴜᴘᴅᴀᴛᴇꜱ ᴄʜᴀɴɴᴇʟ 📌', url=UPDATE_CHNL_LNK)]
             ]
+        except MediaEmpty:
+            logger.warning("Media reference expired or invalid when pre-generating stream button in BIN_CHANNEL")
         except Exception as e:
             logger.warning(f"Could not pre-generate stream button in BIN_CHANNEL: {e}")
 

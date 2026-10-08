@@ -198,7 +198,7 @@ async def get_search_results(chat_id, query, file_type=None, max_results=None, o
             words = [re.escape(w) for w in query.split() if w]
             raw_pattern = (r".*[\s\.\+\-_]".join(words) if words else r".")
         else:
-            raw_pattern = (r"(\b|[\.\+\-_])" + re.escape(query) + r"(\b|[\.\+\-_])" )
+            raw_pattern = (r"(?:^|[\s\.\+\-_\[\]\(\)])" + re.escape(query))
         try:
             regex = compile_regex(raw_pattern)
         except re.error:
