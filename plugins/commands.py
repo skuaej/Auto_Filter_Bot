@@ -468,14 +468,14 @@ async def start(client, message):
             f_caption = clean_filename(files.file_name)
         btn = await stream_buttons(message.from_user.id, file_id)
         if files.file_type == 'video':
-            msg = await client.send_video(
-                chat_id=message.from_user.id,
-                video=file_id,
-                caption=f_caption,
-                video_cover=cover,
-                protect_content=settings.get('file_secure', PROTECT_CONTENT),
-                reply_markup=InlineKeyboardMarkup(btn)
+            msg = await client.send_cached_media(
+    chat_id=message.chat.id,
+    file_id=file_id,  # change 'video=' to 'file_id='
+    caption=caption,
+    protect_content=PROTECT_CONTENT,
+    reply_markup=reply_markup
             )
+            
         else:
             msg = await client.send_cached_media(
                 chat_id=message.from_user.id,
