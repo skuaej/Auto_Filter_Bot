@@ -429,8 +429,16 @@ async def start(client, message):
 
                 await asyncio.sleep(DELETE_TIME)
                 if send_allfiles:
-                    await client.delete_messages(chat_id=message.from_user.id, message_ids=[x.id for x in send_allfiles])
-                await k.edit_text("<b>ʏᴏᴜʀ ᴀʟʟ ᴠɪᴅᴇᴏꜱ/ꜰɪʟᴇꜱ ᴀʀᴇ ᴅᴇʟᴇᴛᴇᴅ ꜱᴜᴄᴄᴇꜱꜱꜰᴜʟʟʏ !\nᴋɪɴᴅʟʏ ꜱᴇᴀʀᴄʜ ᴀɢᴀɪɴ</b>")
+                    try:
+                        await client.delete_messages(chat_id=message.from_user.id, message_ids=[x.id for x in send_allfiles])
+                    except Exception:
+                        pass
+                try:
+                    await k.edit_text("<b>ʏᴏᴜʀ ᴀʟʟ ᴠɪᴅᴇᴏꜱ/ꜰɪʟᴇꜱ ᴀʀᴇ ᴅᴇʟᴇᴛᴇᴅ ꜱᴜᴄᴄᴇꜱꜱꜰᴜʟʟʏ !\nᴋɪɴᴅʟʏ ꜱᴇᴀʀᴄʜ ᴀɢᴀɪɴ</b>")
+                    await asyncio.sleep(15)
+                    await k.delete()
+                except Exception:
+                    pass
                 return
             except MediaEmpty:
                 await message.reply('<b>⚠️ ꜰɪʟᴇ ɪꜱ ᴄᴜʀʀᴇɴᴛʟʏ ᴜɴᴀᴠᴀɪʟᴀʙʟᴇ. ᴘʟᴇᴀꜱᴇ ᴛʀʏ ᴀɢᴀɪɴ ʟᴀᴛᴇʀ!</b>')
@@ -549,15 +557,35 @@ async def start(client, message):
                 reply_markup=InlineKeyboardMarkup(btn)
             )
         
-        k = await msg.reply(script.DEL_MSG.format(get_time(DELETE_TIME)), parse_mode=enums.ParseMode.HTML)
+        k = await client.send_message(
+            chat_id=message.from_user.id,
+            text=script.DEL_MSG.format(get_time(DELETE_TIME)),
+            parse_mode=enums.ParseMode.HTML
+        )
         await asyncio.sleep(DELETE_TIME)
-        await msg.delete()
-        await k.edit_text("<b>ʏᴏᴜʀ ᴠɪᴅᴇᴏ / ꜰɪʟᴇ ɪꜱ ꜱᴜᴄᴄᴇꜱꜱꜰᴜʟʟʏ ᴅᴇʟᴇᴛᴇᴅ !!</b>")
+        try:
+            await msg.delete()
+        except Exception:
+            pass
+        try:
+            await k.edit_text("<b>ʏᴏᴜʀ ᴠɪᴅᴇᴏ / ꜰɪʟᴇ ɪꜱ ꜱᴜᴄᴄᴇꜱꜱꜰᴜʟʟʏ ᴅᴇʟᴇᴛᴇᴅ !!</b>")
+            await asyncio.sleep(15)
+            await k.delete()
+        except Exception:
+            pass
         return
     except StopPropagation:
         raise
     except MediaEmpty:
-        return await message.reply('<b>⚠️ ꜰɪʟᴇ ɪꜱ ᴄᴜʀʀᴇɴᴛʟʏ ᴜɴᴀᴠᴀɪʟᴀʙʟᴇ (Media reference expired in Telegram). ᴘʟᴇᴀꜱᴇ ᴛʀʏ ᴀɴᴏᴛʜᴇʀ ꜰɪʟᴇ!</b>')
+        try:
+            if 'files' in locals() and files:
+                await Media.collection.delete_one({'_id': getattr(files, 'file_id', None)})
+                if MULTIPLE_DB:
+                    await Media2.collection.delete_one({'_id': getattr(files, 'file_id', None)})
+                logger.info(f"Purged deleted file from DB: {getattr(files, 'file_name', '')}")
+        except Exception:
+            pass
+        return await message.reply('<b>⚠️ ꜰɪʟᴇ ɪꜱ ᴄᴜʀʀᴇɴᴛʟʏ ᴜɴᴀᴠᴀɪʟᴀʙʟᴇ (Media was deleted from Telegram). It has been cleaned from the database.</b>')
     except Exception as e:
         logger.exception(f"Error In /start command - {e}")
         pass
